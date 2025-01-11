@@ -31,9 +31,15 @@ except Exception as e:
 # App title
 st.title("Pneumothorax Grading and Image Viewer")
 
-# Initialize session state for the current index
+# Initialize session state
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
+
+if "side" not in st.session_state:
+    st.session_state.side = ""
+
+if "drop" not in st.session_state:
+    st.session_state.drop = False
 
 # Skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
@@ -66,43 +72,38 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# User input for grading and measurements
-drop_checkbox = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
+# Widgets for grading and side selection
+col1, col2 = st.columns(2)
+with col1:
+    st.session_state.drop = st.checkbox("Drop this image", value=row.get("Drop") == "True")
 
-# Selectbox for Pneumothorax Type
+with col2:
+    st.session_state.side = st.radio(
+        "Side",
+        options=["Right", "Left"],
+        index=0 if row.get("Side") == "Right" else 1
+    )
+
+# Pneumothorax type and size selection
 pneumothorax_type = st.selectbox(
     "Pneumothorax Type",
     ["Simple", "Tension"],
     index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"])
 )
-
-# Selectbox for Pneumothorax Size
 pneumothorax_size = st.selectbox(
     "Pneumothorax Size",
     ["Small", "Large"],
     index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"])
 )
 
-# Checkboxes for Affected Side
-col1, col2 = st.columns(2)
-side_right = col1.checkbox("Right", value=row.get("Side") == "Right", key="side_right")
-side_left = col2.checkbox("Left", value=row.get("Side") == "Left", key="side_left")
-
-# Ensure only one checkbox is selected
-if side_right and side_left:
-    if st.session_state["side_right"]:
-        st.session_state["side_left"] = False
-    else:
-        st.session_state["side_right"] = False
-
 # Save button
 if st.button("Save Changes"):
-    # Update the metadata
+    # Update metadata
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-    GT_Pneumothorax.at[st.session_state.current_index, "Side"] = "Right" if st.session_state["side_right"] else "Left"
+    GT_Pneumothorax.at[st.session_state.current_index, "Side"] = st.session_state.side
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(drop_checkbox)
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(st.session_state.drop)
 
     try:
         # Save changes locally
@@ -124,5 +125,5 @@ if st.button("Save Changes"):
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
+elif col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
