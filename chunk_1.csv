@@ -21,7 +21,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 19,image_3078.png,,,,1.0,True
 20,image_9071.png,,,,1.0,True
 21,image_9511.png,,,,1.0,True
-22,image_10392.png,,,,,
+22,image_10392.png,,,,1.0,True
 23,image_9681.png,,,,,
 24,image_2885.png,,,,,
 25,image_11543.png,,,,,
