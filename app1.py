@@ -124,4 +124,4 @@ col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
-    st.session_state.current_index += 1"
+    st.session_state.current_index += 1
