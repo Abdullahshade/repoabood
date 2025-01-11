@@ -35,11 +35,13 @@ st.title("Pneumothorax Grading and Image Viewer")
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
-if "side" not in st.session_state:
-    st.session_state.side = ""
-
 if "drop" not in st.session_state:
     st.session_state.drop = False
+
+# Reset the side value for every new image
+if "previous_index" not in st.session_state or st.session_state.previous_index != st.session_state.current_index:
+    st.session_state.side = ""  # Reset side to empty
+    st.session_state.previous_index = st.session_state.current_index
 
 # Skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
@@ -73,16 +75,15 @@ else:
     st.stop()
 
 # Widgets for grading and side selection
-col1, col2 = st.columns(2)
-with col1:
-    st.session_state.drop = st.checkbox("Drop this image", value=row.get("Drop") == "True")
+st.session_state.drop = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
 
-with col2:
-    st.session_state.side = st.radio(
-        "Side",
-        options=["Right", "Left"],
-        index=0 if row.get("Side") == "Right" else 1
-    )
+# Radio buttons for side with empty default for each new image
+st.session_state.side = st.radio(
+    "Side",
+    options=["", "Right", "Left"],  # Add empty option as the first choice
+    format_func=lambda x: "Select Side" if x == "" else x,
+    index=0 if st.session_state.side == "" else ["", "Right", "Left"].index(st.session_state.side)
+)
 
 # Pneumothorax type and size selection
 pneumothorax_type = st.selectbox(
@@ -98,28 +99,31 @@ pneumothorax_size = st.selectbox(
 
 # Save button
 if st.button("Save Changes"):
-    # Update metadata
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-    GT_Pneumothorax.at[st.session_state.current_index, "Side"] = st.session_state.side
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(st.session_state.drop)
+    if st.session_state.side == "":
+        st.error("Please select a valid Side (Right or Left).")
+    else:
+        # Update metadata
+        GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
+        GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
+        GT_Pneumothorax.at[st.session_state.current_index, "Side"] = st.session_state.side
+        GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+        GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(st.session_state.drop)
 
-    try:
-        # Save changes locally
-        GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        try:
+            # Save changes locally
+            GT_Pneumothorax.to_csv(csv_file_path, index=False)
 
-        # Push updated file to GitHub
-        updated_content = GT_Pneumothorax.to_csv(index=False)
-        repo.update_file(
-            path=contents.path,
-            message="Update metadata with pneumothorax grading",
-            content=updated_content,
-            sha=contents.sha
-        )
-        st.success(f"Changes saved for Image {row['Image_Name']}!")
-    except Exception as e:
-        st.error(f"Failed to save changes or push to GitHub: {e}")
+            # Push updated file to GitHub
+            updated_content = GT_Pneumothorax.to_csv(index=False)
+            repo.update_file(
+                path=contents.path,
+                message="Update metadata with pneumothorax grading",
+                content=updated_content,
+                sha=contents.sha
+            )
+            st.success(f"Changes saved for Image {row['Image_Name']}!")
+        except Exception as e:
+            st.error(f"Failed to save changes or push to GitHub: {e}")
 
 # Navigation buttons
 col1, col2 = st.columns(2)
