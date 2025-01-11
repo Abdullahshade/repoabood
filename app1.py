@@ -17,7 +17,7 @@ repo = g.get_repo(REPO_NAME)
 images_folder = "Chunk1"  # Path to your images folder (update as needed)
 csv_file_path = "chunk_1.csv"  # Path to your CSV file (update as needed)
 
-# Load metadata (GT_Pneumothorax.csv)
+# Load metadata (chunk_1.csv)
 try:
     # Fetch the latest file from the GitHub repository
     contents = repo.get_contents(FILE_PATH)
@@ -35,11 +35,11 @@ st.title("Pneumothorax Grading and Image Viewer")
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
-# Loop to skip labeled images automatically
+# Skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
     row = GT_Pneumothorax.iloc[st.session_state.current_index]
-    if row["Label_Flag"] == 1:
-        st.session_state.current_index += 1  # Skip labeled images
+    if row["Label_Flag"] == 1:  # Skip already labeled images
+        st.session_state.current_index += 1
     else:
         break
 
@@ -54,7 +54,7 @@ row = GT_Pneumothorax.iloc[st.session_state.current_index]
 # Get the current image path (based on Image_Name)
 image_path = os.path.join(images_folder, row["Image_Name"])
 
-# Check if the image file exists and display it
+# Display the image
 if os.path.exists(image_path):
     img = Image.open(image_path)
     st.image(
@@ -66,61 +66,49 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# Handling user input for Pneumothorax type and measurements
-drop_checkbox = st.button("Drop")
-pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+# User input for grading and measurements
+drop_checkbox = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
+
+# Selectbox for Pneumothorax Type
+pneumothorax_type = st.selectbox(
+    "Pneumothorax Type",
+    ["Simple", "Tension"],
+    index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"])
+)
+
+# Selectbox for Pneumothorax Size
+pneumothorax_size = st.selectbox(
+    "Pneumothorax Size",
+    ["Small", "Large"],
+    index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"])
+)
 
 # Checkboxes for Affected Side
 col1, col2 = st.columns(2)
-affected_right = col1.checkbox("Right", value=row.get("Affected_Side") == "Right", key="affected_right")
-affected_left = col2.checkbox("Left", value=row.get("Affected_Side") == "Left", key="affected_left")
+side_right = col1.checkbox("Right", value=row.get("Side") == "Right", key="side_right")
+side_left = col2.checkbox("Left", value=row.get("Side") == "Left", key="side_left")
 
-# Ensure only one checkbox is selected at a time
-if affected_right and affected_left:
-    if st.session_state["affected_right"]:
-        st.session_state["affected_left"] = False
+# Ensure only one checkbox is selected
+if side_right and side_left:
+    if st.session_state["side_right"]:
+        st.session_state["side_left"] = False
     else:
-        st.session_state["affected_right"] = False
+        st.session_state["side_right"] = False
 
-# Checkbox to save changes
-save_changes = st.button("Save Changes")
-
-# Drop functionality
-if drop_checkbox:
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
-
-    try:
-        # Save the updated CSV locally
-        GT_Pneumothorax.to_csv(csv_file_path, index=False)
-
-        # Push the updated file to GitHub
-        updated_content = GT_Pneumothorax.to_csv(index=False)
-        repo.update_file(
-            path=contents.path,
-            message="Mark image as dropped",
-            content=updated_content,
-            sha=contents.sha
-        )
-        st.success(f"Changes saved and pushed to GitHub for Image {row['Image_Name']}!")
-    except Exception as e:
-        st.error(f"Failed to save changes or push to GitHub: {e}")
-
-# Save Changes functionality
-elif save_changes:
+# Save button
+if st.button("Save Changes"):
+    # Update the metadata
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-    affected_side = "Right" if st.session_state["affected_right"] else "Left"
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
+    GT_Pneumothorax.at[st.session_state.current_index, "Side"] = "Right" if st.session_state["side_right"] else "Left"
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(drop_checkbox)
 
     try:
-        # Save the updated CSV locally
+        # Save changes locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
 
-        # Push updated metadata to GitHub
+        # Push updated file to GitHub
         updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
             path=contents.path,
@@ -128,11 +116,11 @@ elif save_changes:
             content=updated_content,
             sha=contents.sha
         )
-        st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
+        st.success(f"Changes saved for Image {row['Image_Name']}!")
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
-# Navigation buttons (Previous / Next)
+# Navigation buttons
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
