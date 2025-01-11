@@ -35,11 +35,11 @@ st.title("Pneumothorax Grading and Image Viewer")
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
-# Loop to skip labeled images automatically
+# Loop to skip labeled or dropped images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
     row = GT_Pneumothorax.iloc[st.session_state.current_index]
-    if row["Label_Flag"] == 1:
-        st.session_state.current_index += 1  # Skip labeled images
+    if row["Label_Flag"] == 1:  # Skip labeled or dropped images
+        st.session_state.current_index += 1
     else:
         break
 
@@ -69,15 +69,42 @@ else:
 # Handling user input for Pneumothorax type and measurements
 with st.form(key="grading_form"):
     pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-    pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
-    Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=0)
+    pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+    affected_side = st.selectbox("Affected Side", ["Right", "Left"], index=0)
+    
     # Submit button inside the form
     form_submit = st.form_submit_button("Save Changes")
 
-if form_submit:
+# Drop functionality
+drop_button = st.button("Drop")
+
+# Handle drop functionality
+if drop_button:
+    # Mark the current image as dropped
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
+
+    try:
+        # Save the updated CSV locally
+        GT_Pneumothorax.to_csv(csv_file_path, index=False)
+
+        # Push the updated file to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
+        repo.update_file(
+            path=contents.path,
+            message="Mark image as dropped",
+            content=updated_content,
+            sha=contents.sha
+        )
+        st.success(f"Image {row['Image_Name']} marked as dropped and changes pushed to GitHub!")
+    except Exception as e:
+        st.error(f"Failed to save changes or push to GitHub: {e}")
+
+# Handle form submission (grading changes)
+elif form_submit:
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_Size
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = Affected_Side
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
 
