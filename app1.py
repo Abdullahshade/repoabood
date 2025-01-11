@@ -31,22 +31,17 @@ except Exception as e:
 # App title
 st.title("Pneumothorax Grading and Image Viewer")
 
-# Initialize session state for the current index and stay_on_page flag
+# Initialize session state for the current index
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
-if "stay_on_page" not in st.session_state:
-    st.session_state.stay_on_page = True
-if "last_action" not in st.session_state:
-    st.session_state.last_action = None  # Track the last action
 
 # Loop to skip labeled images automatically
-if not st.session_state.stay_on_page:
-    while st.session_state.current_index < len(GT_Pneumothorax):
-        row = GT_Pneumothorax.iloc[st.session_state.current_index]
-        if row["Label_Flag"] == 1:
-            st.session_state.current_index += 1  # Skip labeled images
-        else:
-            break
+while st.session_state.current_index < len(GT_Pneumothorax):
+    row = GT_Pneumothorax.iloc[st.session_state.current_index]
+    if row["Label_Flag"] == 1:
+        st.session_state.current_index += 1  # Skip labeled images
+    else:
+        break
 
 # Ensure there are still images left to process
 if st.session_state.current_index >= len(GT_Pneumothorax):
@@ -72,51 +67,14 @@ else:
     st.stop()
 
 # Handling user input for Pneumothorax type and measurements
-drop_checkbox = st.button("Drop")
-pneumothorax_type = st.selectbox(
-    "Pneumothorax Type",
-    ["Simple", "Tension"],
-    index=["Simple", "Tension"].index(row["Pneumothorax_Type"] if row["Pneumothorax_Type"] in ["Simple", "Tension"] else "Simple")
-)
-pneumothorax_Size = st.selectbox(
-    "Pneumothorax Size",
-    ["Small", "Large"],
-    index=["Small", "Large"].index(row["Pneumothorax_Size"] if row["Pneumothorax_Size"] in ["Small", "Large"] else "Small")
-)
-Affected_Side = st.selectbox(
-    "Affected Side",
-    ["Right", "Left"],
-    index=["Right", "Left"].index(row["Affected_Side"] if row["Affected_Side"] in ["Right", "Left"] else "Right")
-)
+with st.form(key="grading_form"):
+    pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
+    pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+    Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=0)
+    # Submit button inside the form
+    form_submit = st.form_submit_button("Save Changes")
 
-# Checkbox to save changes
-save_changes = st.button("Save Changes")
-
-# Drop functionality
-if drop_checkbox:
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
-
-    try:
-        # Save the updated CSV locally
-        GT_Pneumothorax.to_csv(csv_file_path, index=False)
-
-        # Push the updated file to GitHub
-        updated_content = GT_Pneumothorax.to_csv(index=False)
-        repo.update_file(
-            path=contents.path,
-            message="Mark image as dropped",
-            content=updated_content,
-            sha=contents.sha
-        )
-        st.success(f"Changes saved and pushed to GitHub for Image {row['Image_Name']}!")
-        st.session_state.stay_on_page = True  # Stay on the current page
-        st.session_state.last_action = "drop"
-    except Exception as e:
-        st.error(f"Failed to save changes or push to GitHub: {e}")
-
-# Save Changes functionality
-elif save_changes:
+if form_submit:
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_Size
     GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = Affected_Side
@@ -136,8 +94,6 @@ elif save_changes:
             sha=contents.sha
         )
         st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
-        st.session_state.stay_on_page = True  # Stay on the current page
-        st.session_state.last_action = "save"
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -145,9 +101,5 @@ elif save_changes:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-    st.session_state.stay_on_page = False
-    st.session_state.last_action = "navigate"
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
-    st.session_state.stay_on_page = False
-    st.session_state.last_action = "navigate"
