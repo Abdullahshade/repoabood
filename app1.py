@@ -31,17 +31,20 @@ except Exception as e:
 # App title
 st.title("Pneumothorax Grading and Image Viewer")
 
-# Initialize session state for the current index
+# Initialize session state for the current index and stay_on_page flag
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
+if "stay_on_page" not in st.session_state:
+    st.session_state.stay_on_page = True
 
 # Loop to skip labeled images automatically
-while st.session_state.current_index < len(GT_Pneumothorax):
-    row = GT_Pneumothorax.iloc[st.session_state.current_index]
-    if row["Label_Flag"] == 1:
-        st.session_state.current_index += 1  # Skip labeled images
-    else:
-        break
+if not st.session_state.stay_on_page:
+    while st.session_state.current_index < len(GT_Pneumothorax):
+        row = GT_Pneumothorax.iloc[st.session_state.current_index]
+        if row["Label_Flag"] == 1:
+            st.session_state.current_index += 1  # Skip labeled images
+        else:
+            break
 
 # Ensure there are still images left to process
 if st.session_state.current_index >= len(GT_Pneumothorax):
@@ -93,6 +96,7 @@ if drop_checkbox:
             sha=contents.sha
         )
         st.success(f"Changes saved and pushed to GitHub for Image {row['Image_Name']}!")
+        st.session_state.stay_on_page = True  # Stay on the current page
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -117,6 +121,7 @@ elif save_changes:
             sha=contents.sha
         )
         st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
+        st.session_state.stay_on_page = True  # Stay on the current page
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -124,5 +129,7 @@ elif save_changes:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
+    st.session_state.stay_on_page = False
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
+    st.session_state.stay_on_page = False
