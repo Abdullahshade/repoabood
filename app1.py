@@ -73,9 +73,21 @@ else:
 
 # Handling user input for Pneumothorax type and measurements
 drop_checkbox = st.button("Drop")
-pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=["Simple", "Tension"].index(row.get("Pneumothorax_Type", "Simple")))
-pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=["Small", "Large"].index(row.get("Pneumothorax_Size", "Small")))
-Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=["Right", "Left"].index(row.get("Affected_Side", "Right")))
+pneumothorax_type = st.selectbox(
+    "Pneumothorax Type",
+    ["Simple", "Tension"],
+    index=["Simple", "Tension"].index(row["Pneumothorax_Type"] if pd.notna(row["Pneumothorax_Type"]) else "Simple")
+)
+pneumothorax_Size = st.selectbox(
+    "Pneumothorax Size",
+    ["Small", "Large"],
+    index=["Small", "Large"].index(row["Pneumothorax_Size"] if pd.notna(row["Pneumothorax_Size"]) else "Small")
+)
+Affected_Side = st.selectbox(
+    "Affected_Side",
+    ["Right", "Left"],
+    index=["Right", "Left"].index(row["Affected_Side"] if pd.notna(row["Affected_Side"]) else "Right")
+)
 
 # Checkbox to save changes
 save_changes = st.button("Save Changes")
