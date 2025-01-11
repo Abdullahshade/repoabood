@@ -21,6 +21,10 @@ st.title("Pneumothorax Grading and Image Viewer")
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
+# Initialize a flag to control if the current image is being updated
+if "is_updating" not in st.session_state:
+    st.session_state.is_updating = False
+
 # Loop to skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
     row = GT_Pneumothorax.iloc[st.session_state.current_index]
@@ -54,12 +58,19 @@ else:
 
 # Handling user input for Pneumothorax type and measurements
 drop_checkbox = st.button("Drop")
-pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
-Affected_Side = st.selectbox("Affected Side", ["Right", "Left"], index=0)
+pneumothorax_type = st.selectbox(
+    "Pneumothorax Type", ["Simple", "Tension"], index=0, key="pneumothorax_type"
+)
+pneumothorax_Size = st.selectbox(
+    "Pneumothorax Size", ["Small", "Large"], index=0, key="pneumothorax_size"
+)
+Affected_Side = st.selectbox(
+    "Affected Side", ["Right", "Left"], index=0, key="affected_side"
+)
 
-# Checkbox to save changes
+# Save button handler
 save_changes = st.button("Save Changes")
+
 if drop_checkbox:
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = drop_checkbox
@@ -68,7 +79,7 @@ if drop_checkbox:
         st.success(f"Changes saved for Image {row['Image_Name']}!")
     except Exception as e:
         st.error(f"Failed to save changes: {e}")
-# Mark as labeled
+# Save changes and update the metadata
 elif save_changes:
     # Update the metadata locally
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
@@ -77,7 +88,6 @@ elif save_changes:
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
 
-    # Save the updated CSV locally
     try:
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
         st.success(f"Changes saved for Image {row['Image_Name']}!")
@@ -88,5 +98,7 @@ elif save_changes:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
+    st.session_state.is_updating = True
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
+    st.session_state.is_updating = True
