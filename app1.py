@@ -73,23 +73,21 @@ else:
 
 # Handling user input for Pneumothorax type and measurements
 drop_checkbox = st.button("Drop")
-
 pneumothorax_type = st.selectbox(
     "Pneumothorax Type",
     ["Simple", "Tension"],
-    index=["Simple", "Tension"].index(row.get("Pneumothorax_Type", "Simple"))
+    index=["Simple", "Tension"].index(row["Pneumothorax_Type"] if row["Pneumothorax_Type"] in ["Simple", "Tension"] else "Simple")
 )
 pneumothorax_Size = st.selectbox(
     "Pneumothorax Size",
     ["Small", "Large"],
-    index=["Small", "Large"].index(row.get("Pneumothorax_Size", "Small"))
+    index=["Small", "Large"].index(row["Pneumothorax_Size"] if row["Pneumothorax_Size"] in ["Small", "Large"] else "Small")
 )
 Affected_Side = st.selectbox(
     "Affected Side",
     ["Right", "Left"],
-    index=["Right", "Left"].index(row.get("Affected_Side", "Right"))
+    index=["Right", "Left"].index(row["Affected_Side"] if row["Affected_Side"] in ["Right", "Left"] else "Right")
 )
-
 
 # Checkbox to save changes
 save_changes = st.button("Save Changes")
