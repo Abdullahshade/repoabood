@@ -5,14 +5,14 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 3,image_1207.png,Tension,Large,Right,1.0,True
 4,image_6609.png,Simple,Small,Right,1.0,True
 5,image_804.png,Simple,Small,Right,1.0,False
-6,image_2014.png,Simple,Small,Right,1.0,
+6,image_2014.png,Simple,Small,Right,,False
 7,image_4992.png,Tension,Large,Right,1.0,True
 8,image_5330.png,Simple,Small,Right,1.0,False
 9,image_3061.png,Simple,Small,Right,1.0,False
 10,image_8708.png,Simple,Small,Right,1.0,False
 11,image_4531.png,Tension,Small,Right,1.0,True
 12,image_1185.png,Simple,Small,Left,1.0,False
-13,image_581.png,Tension,Small,,1.0,
+13,image_581.png,Tension,Small,,,False
 14,image_2833.png,Simple,Small,Left,1.0,False
 15,image_1037.png,Simple,Small,Left,1.0,False
 16,image_10560.png,,,,,True
