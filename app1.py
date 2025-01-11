@@ -22,7 +22,6 @@ csv_file_path = "chunk_1.csv"
 
 # Fetch and load the CSV metadata from GitHub
 try:
-    # Get the latest CSV file from the GitHub repository
     contents = repo.get_contents(FILE_PATH)
     with open(csv_file_path, "wb") as f:
         f.write(contents.decoded_content)
@@ -31,25 +30,17 @@ except Exception as e:
     st.error(f"Failed to fetch metadata from GitHub: {e}")
     st.stop()
 
-# Initialize session state for the current index
+# Initialize session state
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
-
-# Function to save updates to GitHub
-def save_to_github(updated_df, commit_message):
-    try:
-        # Convert DataFrame to CSV string
-        updated_content = updated_df.to_csv(index=False)
-        # Push updated file to GitHub
-        repo.update_file(
-            path=contents.path,
-            message=commit_message,
-            content=updated_content,
-            sha=contents.sha
-        )
-        st.success("Changes successfully saved and pushed to GitHub!")
-    except Exception as e:
-        st.error(f"Failed to push changes to GitHub: {e}")
+if "affected_side" not in st.session_state:
+    st.session_state.affected_side = "Right"
+if "pneumothorax_type" not in st.session_state:
+    st.session_state.pneumothorax_type = "Simple"
+if "pneumothorax_size" not in st.session_state:
+    st.session_state.pneumothorax_size = "Small"
+if "is_updating" not in st.session_state:
+    st.session_state.is_updating = False
 
 # Skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
@@ -76,24 +67,51 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# User input fields
+# Initialize widget values from metadata or session state
+st.session_state.pneumothorax_type = st.selectbox(
+    "Pneumothorax Type",
+    ["Simple", "Tension"],
+    index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"]),
+    key="pneumothorax_type"
+)
+
+st.session_state.pneumothorax_size = st.selectbox(
+    "Pneumothorax Size",
+    ["Small", "Large"],
+    index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"]),
+    key="pneumothorax_size"
+)
+
+st.session_state.affected_side = st.selectbox(
+    "Affected Side",
+    ["Right", "Left"],
+    index=0 if pd.isna(row.get("Affected_Side")) else ["Right", "Left"].index(row["Affected_Side"]),
+    key="affected_side"
+)
+
 drop_checkbox = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
-pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"]))
-pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"]))
-affected_side = st.selectbox("Affected Side", ["Right", "Left"], index=0 if pd.isna(row.get("Affected_Side")) else ["Right", "Left"].index(row["Affected_Side"]))
 
 # Save changes button
 if st.button("Save Changes"):
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = st.session_state.pneumothorax_type
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = st.session_state.pneumothorax_size
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = st.session_state.affected_side
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(drop_checkbox)
+
     try:
         # Save changes locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
-        # Push changes to GitHub
-        save_to_github(GT_Pneumothorax, "Updated metadata with user annotations")
+
+        # Push updated metadata to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
+        repo.update_file(
+            path=contents.path,
+            message="Update metadata with user annotations",
+            content=updated_content,
+            sha=contents.sha
+        )
+        st.success(f"Changes saved for Image {row['Image_Name']}!")
     except Exception as e:
         st.error(f"Failed to save changes: {e}")
 
