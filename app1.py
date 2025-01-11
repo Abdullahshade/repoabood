@@ -3,6 +3,7 @@ from PIL import Image
 from github import Github
 import os
 import streamlit as st
+
 # Load GitHub token from Streamlit secrets
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 g = Github(GITHUB_TOKEN)
@@ -68,8 +69,19 @@ else:
 # Handling user input for Pneumothorax type and measurements
 drop_checkbox = st.button("Drop")
 pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
-Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=0)
+pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+
+# Checkboxes for Affected Side
+col1, col2 = st.columns(2)
+affected_right = col1.checkbox("Right", value=row.get("Affected_Side") == "Right", key="affected_right")
+affected_left = col2.checkbox("Left", value=row.get("Affected_Side") == "Left", key="affected_left")
+
+# Ensure only one checkbox is selected at a time
+if affected_right and affected_left:
+    if st.session_state["affected_right"]:
+        st.session_state["affected_left"] = False
+    else:
+        st.session_state["affected_right"] = False
 
 # Checkbox to save changes
 save_changes = st.button("Save Changes")
@@ -98,8 +110,9 @@ if drop_checkbox:
 # Save Changes functionality
 elif save_changes:
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_Size
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = Affected_Side
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
+    affected_side = "Right" if st.session_state["affected_right"] else "Left"
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
 
