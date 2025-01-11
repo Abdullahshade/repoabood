@@ -1,8 +1,8 @@
+import streamlit as st
 import pandas as pd
 from PIL import Image
 from github import Github
 import os
-import streamlit as st
 
 # Load GitHub token from Streamlit secrets
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
@@ -17,7 +17,7 @@ repo = g.get_repo(REPO_NAME)
 images_folder = "Chunk1"  # Path to your images folder (update as needed)
 csv_file_path = "chunk_1.csv"  # Path to your CSV file (update as needed)
 
-# Load metadata (chunk_1.csv)
+# Load metadata (GT_Pneumothorax.csv)
 try:
     # Fetch the latest file from the GitHub repository
     contents = repo.get_contents(FILE_PATH)
@@ -31,23 +31,15 @@ except Exception as e:
 # App title
 st.title("Pneumothorax Grading and Image Viewer")
 
-# Initialize session state
+# Initialize session state for the current index
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
-if "drop" not in st.session_state:
-    st.session_state.drop = False
-
-# Reset the side value for every new image
-if "previous_index" not in st.session_state or st.session_state.previous_index != st.session_state.current_index:
-    st.session_state.side = ""  # Reset side to empty
-    st.session_state.previous_index = st.session_state.current_index
-
-# Skip labeled images automatically
+# Loop to skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
     row = GT_Pneumothorax.iloc[st.session_state.current_index]
-    if row["Label_Flag"] == 1:  # Skip already labeled images
-        st.session_state.current_index += 1
+    if row["Label_Flag"] == 1:
+        st.session_state.current_index += 1  # Skip labeled images
     else:
         break
 
@@ -62,7 +54,7 @@ row = GT_Pneumothorax.iloc[st.session_state.current_index]
 # Get the current image path (based on Image_Name)
 image_path = os.path.join(images_folder, row["Image_Name"])
 
-# Display the image
+# Check if the image file exists and display it
 if os.path.exists(image_path):
     img = Image.open(image_path)
     st.image(
@@ -74,60 +66,63 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# Widgets for grading and side selection
-st.session_state.drop = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
+# Handling user input for Pneumothorax type and measurements
+drop_checkbox = st.button("Drop")
+pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
+pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=0)
 
-# Radio buttons for side with empty default for each new image
-st.session_state.side = st.radio(
-    "Side",
-    options=["", "Right", "Left"],  # Add empty option as the first choice
-    format_func=lambda x: "Select Side" if x == "" else x,
-    index=0 if st.session_state.side == "" else ["", "Right", "Left"].index(st.session_state.side)
-)
+# Checkbox to save changes
+save_changes = st.button("Save Changes")
 
-# Pneumothorax type and size selection
-pneumothorax_type = st.selectbox(
-    "Pneumothorax Type",
-    ["Simple", "Tension"],
-    index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"])
-)
-pneumothorax_size = st.selectbox(
-    "Pneumothorax Size",
-    ["Small", "Large"],
-    index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"])
-)
+# Drop functionality
+if drop_checkbox:
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
 
-# Save button
-if st.button("Save Changes"):
-    if st.session_state.side == "":
-        st.error("Please select a valid Side (Right or Left).")
-    else:
-        # Update metadata
-        GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-        GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-        GT_Pneumothorax.at[st.session_state.current_index, "Side"] = st.session_state.side
-        GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-        GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(st.session_state.drop)
+    try:
+        # Save the updated CSV locally
+        GT_Pneumothorax.to_csv(csv_file_path, index=False)
 
-        try:
-            # Save changes locally
-            GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        # Push the updated file to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
+        repo.update_file(
+            path=contents.path,
+            message="Mark image as dropped",
+            content=updated_content,
+            sha=contents.sha
+        )
+        st.success(f"Changes saved and pushed to GitHub for Image {row['Image_Name']}!")
+    except Exception as e:
+        st.error(f"Failed to save changes or push to GitHub: {e}")
 
-            # Push updated file to GitHub
-            updated_content = GT_Pneumothorax.to_csv(index=False)
-            repo.update_file(
-                path=contents.path,
-                message="Update metadata with pneumothorax grading",
-                content=updated_content,
-                sha=contents.sha
-            )
-            st.success(f"Changes saved for Image {row['Image_Name']}!")
-        except Exception as e:
-            st.error(f"Failed to save changes or push to GitHub: {e}")
+# Save Changes functionality
+elif save_changes:
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_Size
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = Affected_Side
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
 
-# Navigation buttons
+    try:
+        # Save the updated CSV locally
+        GT_Pneumothorax.to_csv(csv_file_path, index=False)
+
+        # Push updated metadata to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
+        repo.update_file(
+            path=contents.path,
+            message="Update metadata with pneumothorax grading",
+            content=updated_content,
+            sha=contents.sha
+        )
+        st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
+    except Exception as e:
+        st.error(f"Failed to save changes or push to GitHub: {e}")
+
+# Navigation buttons (Previous / Next)
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-elif col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
+if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
