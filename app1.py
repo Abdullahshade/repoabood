@@ -2,7 +2,7 @@ import pandas as pd
 from PIL import Image
 from github import Github
 import os
-mport streamlit as st
+import streamlit as st
 # Load GitHub token from Streamlit secrets
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 g = Github(GITHUB_TOKEN)
