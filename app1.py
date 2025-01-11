@@ -36,6 +36,8 @@ if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 if "stay_on_page" not in st.session_state:
     st.session_state.stay_on_page = True
+if "last_action" not in st.session_state:
+    st.session_state.last_action = None  # Track the last action
 
 # Loop to skip labeled images automatically
 if not st.session_state.stay_on_page:
@@ -71,9 +73,9 @@ else:
 
 # Handling user input for Pneumothorax type and measurements
 drop_checkbox = st.button("Drop")
-pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
-Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=0)
+pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=["Simple", "Tension"].index(row.get("Pneumothorax_Type", "Simple")))
+pneumothorax_Size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=["Small", "Large"].index(row.get("Pneumothorax_Size", "Small")))
+Affected_Side = st.selectbox("Affected_Side", ["Right", "Left"], index=["Right", "Left"].index(row.get("Affected_Side", "Right")))
 
 # Checkbox to save changes
 save_changes = st.button("Save Changes")
@@ -97,6 +99,7 @@ if drop_checkbox:
         )
         st.success(f"Changes saved and pushed to GitHub for Image {row['Image_Name']}!")
         st.session_state.stay_on_page = True  # Stay on the current page
+        st.session_state.last_action = "drop"
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -122,6 +125,7 @@ elif save_changes:
         )
         st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
         st.session_state.stay_on_page = True  # Stay on the current page
+        st.session_state.last_action = "save"
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -130,6 +134,8 @@ col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
     st.session_state.stay_on_page = False
+    st.session_state.last_action = "navigate"
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
     st.session_state.stay_on_page = False
+    st.session_state.last_action = "navigate"
