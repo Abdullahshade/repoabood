@@ -60,7 +60,7 @@ if os.path.exists(image_path):
     st.image(
         img,
         caption=f"Image index: {row['Index']} | Image Name: {row['Image_Name']}",
-        use_column_width=True
+        use_container_width=True
     )
 else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
