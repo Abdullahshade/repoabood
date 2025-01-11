@@ -33,14 +33,6 @@ except Exception as e:
 # Initialize session state
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
-if "affected_side" not in st.session_state:
-    st.session_state.affected_side = "Right"
-if "pneumothorax_type" not in st.session_state:
-    st.session_state.pneumothorax_type = "Simple"
-if "pneumothorax_size" not in st.session_state:
-    st.session_state.pneumothorax_size = "Small"
-if "is_updating" not in st.session_state:
-    st.session_state.is_updating = False
 
 # Skip labeled images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
@@ -67,35 +59,39 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# Initialize widget values from metadata or session state
-st.session_state.pneumothorax_type = st.selectbox(
+# Selectbox for Pneumothorax Type
+pneumothorax_type = st.selectbox(
     "Pneumothorax Type",
     ["Simple", "Tension"],
     index=0 if pd.isna(row.get("Pneumothorax_Type")) else ["Simple", "Tension"].index(row["Pneumothorax_Type"]),
     key="pneumothorax_type"
 )
 
-st.session_state.pneumothorax_size = st.selectbox(
+# Selectbox for Pneumothorax Size
+pneumothorax_size = st.selectbox(
     "Pneumothorax Size",
     ["Small", "Large"],
     index=0 if pd.isna(row.get("Pneumothorax_Size")) else ["Small", "Large"].index(row["Pneumothorax_Size"]),
     key="pneumothorax_size"
 )
 
-st.session_state.affected_side = st.selectbox(
+# Selectbox for Affected Side
+affected_side = st.selectbox(
     "Affected Side",
     ["Right", "Left"],
     index=0 if pd.isna(row.get("Affected_Side")) else ["Right", "Left"].index(row["Affected_Side"]),
     key="affected_side"
 )
 
+# Checkbox for dropping the image
 drop_checkbox = st.checkbox("Drop this image", value=(row.get("Drop") == "True"))
 
 # Save changes button
 if st.button("Save Changes"):
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = st.session_state.pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = st.session_state.pneumothorax_size
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = st.session_state.affected_side
+    # Update metadata
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = st.session_state["pneumothorax_type"]
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = st.session_state["pneumothorax_size"]
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = st.session_state["affected_side"]
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = str(drop_checkbox)
 
