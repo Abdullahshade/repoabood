@@ -43,7 +43,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 41,image_7535.png,Simple,Small,Right,1.0,False
 42,image_10330.png,,,,1.0,True
 43,image_2175.png,,,,1.0,True
-44,image_6503.png,,,,,
+44,image_6503.png,,,,1.0,True
 45,image_10605.png,,,,,
 46,image_10864.png,,,,,
 47,image_846.png,,,,,
