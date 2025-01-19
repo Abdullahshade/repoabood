@@ -61,7 +61,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 60,image_11802.png,,,,1.0,True
 61,image_3067.png,,,,1.0,True
 62,image_7878.png,Tension,Small,Right,1.0,True
-63,image_5338.png,,,,,
+63,image_5338.png,,,,1.0,True
 64,image_1024.png,,,,,
 65,image_11730.png,,,,,
 66,image_9782.png,,,,,
