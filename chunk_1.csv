@@ -129,7 +129,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 128,image_8662.png,,,,1.0,True
 129,image_5061.png,,,,1.0,True
 130,image_2306.png,,,,,
-131,image_824.png,,,,,
+131,image_824.png,Simple,Small,Right,1.0,False
 132,image_2759.png,,,,,
 133,image_9642.png,,,,,
 134,image_9897.png,,,,,
