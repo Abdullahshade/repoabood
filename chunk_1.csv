@@ -114,7 +114,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 113,image_2254.png,,,,1.0,True
 114,image_2886.png,,,,1.0,True
 115,image_11214.png,,,,1.0,True
-116,image_5138.png,,,,,
+116,image_5138.png,,,,1.0,True
 117,image_10690.png,,,,1.0,True
 118,image_7237.png,,,,1.0,True
 119,image_1443.png,Simple,Small,Left,1.0,False
