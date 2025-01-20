@@ -170,7 +170,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 170,image_10422.png,,,,,
 171,image_8697.png,,,,1.0,True
 172,image_1645.png,,,,,
-173,image_10614.png,,,,,
+173,image_10614.png,,,,1.0,True
 174,image_8365.png,,,,,
 175,image_6871.png,,,,,
 176,image_7442.png,,,,,
