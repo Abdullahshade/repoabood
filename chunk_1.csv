@@ -154,7 +154,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 154,image_251.png,,,,,
 155,image_7184.png,,,,1.0,True
 156,image_2126.png,,,,,
-157,image_10585.png,,,,,
+157,image_10585.png,,,,1.0,True
 158,image_1283.png,,,,,
 159,image_10164.png,,,,,
 160,image_500.png,,,,,
