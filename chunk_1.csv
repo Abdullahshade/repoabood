@@ -280,7 +280,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 280,image_822.png,Simple,Large,Left,1.0,False
 281,image_6220.png,,,,1.0,True
 282,image_3252.png,,,,1.0,True
-283,image_9812.png,,,,,
+283,image_9812.png,,,,1.0,True
 284,image_2702.png,,,,,
 285,image_7295.png,,,,,
 286,image_1268.png,,,,,
