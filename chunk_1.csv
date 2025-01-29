@@ -388,7 +388,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 390,image_2305.png,,,,1.0,True
 391,image_3323.png,Tension,Large,Right,1.0,False
 392,image_3978.png,Simple,Small,Right,1.0,False
-393,image_2540.png,,,,,
+393,image_2540.png,Tension,Large,Left,1.0,False
 394,image_9608.png,,,,,
 395,image_4547.png,,,,,
 396,image_401.png,,,,,
