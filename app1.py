@@ -14,12 +14,12 @@ FILE_PATH = "chunk_1.csv"  # Path to metadata CSV in your GitHub repo
 repo = g.get_repo(REPO_NAME)
 
 # Define the paths
-images_folder = "Chunk1"  # Path to your images folder
-csv_file_path = "chunk_1.csv"  # Path to your CSV file
+images_folder = "Chunk1"  # Path to your images folder (update as needed)
+csv_file_path = "chunk_1.csv"  # Path to your CSV file (update as needed)
 
 # Load metadata (GT_Pneumothorax.csv)
 try:
-    # Fetch the latest file from GitHub repository
+    # Fetch the latest file from the GitHub repository
     contents = repo.get_contents(FILE_PATH)
     with open(csv_file_path, "wb") as f:
         f.write(contents.decoded_content)
@@ -29,19 +29,21 @@ except Exception as e:
     st.stop()
 
 # App title
-st.title("Pneumothorax Grading a!nd Image Viewer")
+st.title("Pneumothorax Grading and Image Viewer")
 
 # Initialize session state for the current index
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
-    # Find the first unlabeled image
-    while st.session_state.current_index < len(GT_Pneumothorax):
-        row = GT_Pneumothorax.iloc[st.session_state.current_index]
-        if row.get("Label_Flag", 0) == 0:
-            break
-        st.session_state.current_index += 1
 
-# Check if all images are labeled
+# Loop to skip labeled or dropped images automatically
+while st.session_state.current_index < len(GT_Pneumothorax):
+    row = GT_Pneumothorax.iloc[st.session_state.current_index]
+    if row["Label_Flag"] == 1:  # Skip labeled or dropped images
+        st.session_state.current_index += 1
+    else:
+        break
+
+# Ensure there are still images left to process
 if st.session_state.current_index >= len(GT_Pneumothorax):
     st.success("All images have been labeled! No more images to process.")
     st.stop()
@@ -49,7 +51,7 @@ if st.session_state.current_index >= len(GT_Pneumothorax):
 # Get the current row (image and metadata)
 row = GT_Pneumothorax.iloc[st.session_state.current_index]
 
-# Get the current image path
+# Get the current image path (based on Image_Name)
 image_path = os.path.join(images_folder, row["Image_Name"])
 
 # Check if the image file exists and display it
@@ -58,7 +60,7 @@ if os.path.exists(image_path):
     st.image(
         img,
         caption=f"Image index: {row['Index']} | Image Name: {row['Image_Name']}",
-        use_column_width=True
+        use_container_width=True
     )
 else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
@@ -69,18 +71,52 @@ with st.form(key="grading_form"):
     pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
     pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
     affected_side = st.selectbox("Affected Side", ["Right", "Left"], index=0)
+    
+    # Submit button inside the form
     form_submit = st.form_submit_button("Save Changes")
 
-# Drop button
+# Drop functionality
 drop_button = st.button("Drop")
 
-def save_and_push_changes(message):
+# Handle drop functionality
+if drop_button:
+    # Mark the current image as dropped
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
+
     try:
+        # Save the updated CSV locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
-        updated_content = GT_Pneumothorax.to_csv(index=False).encode("utf-8")
+
+        # Push the updated file to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
             path=contents.path,
-            message=message,
+            message="Mark image as dropped",
+            content=updated_content,
+            sha=contents.sha
+        )
+        st.success(f"Image {row['Image_Name']} marked as dropped and changes pushed to GitHub!")
+    except Exception as e:
+        st.error(f"Failed to save changes or push to GitHub: {e}")
+
+# Handle form submission (grading changes)
+elif form_submit:
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
+    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
+    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
+
+    try:
+        # Save the updated CSV locally
+        GT_Pneumothorax.to_csv(csv_file_path, index=False)
+
+        # Push updated metadata to GitHub
+        updated_content = GT_Pneumothorax.to_csv(index=False)
+        repo.update_file(
+            path=contents.path,
+            message="Update metadata with pneumothorax grading",
             content=updated_content,
             sha=contents.sha
         )
@@ -88,59 +124,9 @@ def save_and_push_changes(message):
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
-def find_next_unlabeled(start_index):
-    index = start_index
-    while index < len(GT_Pneumothorax):
-        row = GT_Pneumothorax.iloc[index]
-        if row.get("Label_Flag", 0) == 0:
-            return index
-        index += 1
-    return index
-
-def find_previous_unlabeled(start_index):
-    index = start_index
-    while index >= 0:
-        row = GT_Pneumothorax.iloc[index]
-        if row.get("Label_Flag", 0) == 0:
-            return index
-        index -= 1
-    return index
-
-# Handle form submission
-if form_submit:
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
-    GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
-    GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
-    save_and_push_changes("Update metadata with pneumothorax grading")
-    st.session_state.current_index = find_next_unlabeled(st.session_state.current_index + 1)
-
-# Handle drop button
-if drop_button:
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
-    save_and_push_changes("Mark image as dropped")
-    st.session_state.current_index = find_next_unlabeled(st.session_state.current_index + 1)
-
-# Navigation buttons
+# Navigation buttons (Previous / Next)
 col1, col2 = st.columns(2)
-
-if col1.button("Previous"):
-    new_index = find_previous_unlabeled(st.session_state.current_index - 1)
-    if new_index >= 0:
-        st.session_state.current_index = new_index
-    else:
-        st.warning("No previous unlabeled images.")
-
-if col2.button("Next"):
-    new_index = find_next_unlabeled(st.session_state.current_index + 1)
-    if new_index < len(GT_Pneumothorax):
-        st.session_state.current_index = new_index
-    else:
-        st.warning("No next unlabeled images.")
-
-# Final check if all images are labeled
-if st.session_state.current_index >= len(GT_Pneumothorax):
-    st.success("All images have been labeled! No more images to process.")
-    st.stop()
+if col1.button("Previous") and st.session_state.current_index > 0:
+    st.session_state.current_index -= 1
+if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
+    st.session_state.current_index += 1
