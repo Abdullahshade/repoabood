@@ -3,6 +3,14 @@ import pandas as pd
 from PIL import Image
 from github import Github
 import os
+import sys
+
+def safe_rerun():
+    """Force a rerun of the app."""
+    if hasattr(st, "experimental_rerun"):
+        st.experimental_rerun()
+    else:
+        sys.exit(0)
 
 # -----------------------------
 # Helper function: get the next ungraded index
@@ -24,7 +32,7 @@ FILE_PATH = "chunk_1.csv"              # Path to metadata CSV in GitHub
 repo = g.get_repo(REPO_NAME)
 
 images_folder = "Chunk1"   # Folder where images are stored
-csv_file_path = "chunk_1.csv"  # Local path for the CSV file
+csv_file_path = "chunk_1.csv"  # Local CSV file path
 
 # -----------------------------
 # Load metadata from GitHub
@@ -108,7 +116,7 @@ if drop_button:
         
         # Advance to the next ungraded image and refresh the page
         st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        st.experimental_rerun()
+        safe_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -135,7 +143,7 @@ elif submit_button:
         
         # Advance to the next ungraded image and refresh the page
         st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        st.experimental_rerun()
+        safe_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -145,7 +153,7 @@ elif submit_button:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-    st.experimental_rerun()
+    safe_rerun()
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
-    st.experimental_rerun()
+    safe_rerun()
