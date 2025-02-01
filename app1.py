@@ -42,7 +42,7 @@ def find_next_unlabeled(start_index):
         if GT_Pneumothorax.iloc[index].get("Label_Flag", 0) == 0:
             return index
         index += 1
-    return index
+    return None  # No unlabeled images found
 
 # --- Find Previous Unlabeled Image ---
 def find_previous_unlabeled(start_index):
@@ -51,20 +51,30 @@ def find_previous_unlabeled(start_index):
         if GT_Pneumothorax.iloc[index].get("Label_Flag", 0) == 0:
             return index
         index -= 1
-    return index
+    return None  # No unlabeled images found
 
-# --- Initial Index Setup ---
-if st.session_state.current_index >= len(GT_Pneumothorax) or \
-   GT_Pneumothorax.iloc[st.session_state.current_index].get("Label_Flag", 0) == 1:
-    st.session_state.current_index = find_next_unlabeled(0)
+# --- Validate Current Index ---
+def validate_index():
+    # If current index is invalid or points to a labeled image, find next valid
+    if (st.session_state.current_index >= len(GT_Pneumothorax) or 
+        GT_Pneumothorax.iloc[st.session_state.current_index].get("Label_Flag", 0) == 1):
+        new_index = find_next_unlabeled(0)
+        st.session_state.current_index = new_index if new_index is not None else 0
+
+validate_index()  # Initial validation
 
 # --- Check if All Labeled ---
-if GT_Pneumothorax["Label_Flag"].sum() == len(GT_Pneumothorax):
+if GT_Pneumothorax["Label_Flag"].all():
     st.warning("All images are labeled. Check the CSV or toggle below to review.")
     if st.checkbox("Show labeled images anyway"):
         st.session_state.current_index = 0
     else:
         st.stop()
+
+# --- Boundary Guard ---
+if st.session_state.current_index >= len(GT_Pneumothorax):
+    st.error("No more images to display.")
+    st.stop()
 
 # --- Get Current Image Data ---
 row = GT_Pneumothorax.iloc[st.session_state.current_index]
@@ -78,14 +88,13 @@ if not os.path.exists(image_path):
 img = Image.open(image_path)
 st.image(img, caption=f"Image {st.session_state.current_index + 1}/{len(GT_Pneumothorax)}", use_column_width=True)
 
-# --- Grading Form with Pre-Populated Values ---
+# --- Grading Form ---
 with st.form(key="grading_form"):
-    # Get current values or use defaults
-    current_type = row["Pneumothorax_Type"] if pd.notna(row["Pneumothorax_Type"]) else "Simple"
-    current_size = row["Pneumothorax_Size"] if pd.notna(row["Pneumothorax_Size"]) else "Small"
-    current_side = row["Affected_Side"] if pd.notna(row["Affected_Side"]) else "Right"
+    # Pre-populate form values
+    current_type = row.get("Pneumothorax_Type", "Simple")
+    current_size = row.get("Pneumothorax_Size", "Small")
+    current_side = row.get("Affected_Side", "Right")
 
-    # Form elements
     pneumothorax_type = st.selectbox(
         "Pneumothorax Type",
         ["Simple", "Tension"],
@@ -102,7 +111,6 @@ with st.form(key="grading_form"):
         index=0 if current_side == "Right" else 1
     )
 
-    # Form buttons
     col1, col2 = st.columns([1, 3])
     with col1:
         form_submit = st.form_submit_button("💾 Save")
@@ -128,9 +136,10 @@ if form_submit or drop_submit:
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True" if drop_submit else "False"
     
-    # Update GitHub and move to next image
+    # Update GitHub and validate next index
     update_github()
-    st.session_state.current_index = find_next_unlabeled(st.session_state.current_index + 1)
+    next_index = find_next_unlabeled(st.session_state.current_index + 1)
+    st.session_state.current_index = next_index if next_index is not None else 0
     st.rerun()
 
 # --- Navigation Controls ---
@@ -138,17 +147,18 @@ col_prev, col_next = st.columns(2)
 with col_prev:
     if st.button("⏮️ Previous"):
         new_index = find_previous_unlabeled(st.session_state.current_index - 1)
-        if new_index >= 0:
+        if new_index is not None:
             st.session_state.current_index = new_index
             st.rerun()
 with col_next:
     if st.button("⏭️ Next"):
         new_index = find_next_unlabeled(st.session_state.current_index + 1)
-        if new_index < len(GT_Pneumothorax):
+        if new_index is not None:
             st.session_state.current_index = new_index
             st.rerun()
 
 # --- Progress Display ---
-progress = st.session_state.current_index / len(GT_Pneumothorax)
-st.progress(progress)
-st.caption(f"Progress: {st.session_state.current_index + 1}/{len(GT_Pneumothorax)} images")
+if len(GT_Pneumothorax) > 0:
+    progress = (st.session_state.current_index + 1) / len(GT_Pneumothorax)
+    st.progress(progress)
+    st.caption(f"Progress: {st.session_state.current_index + 1}/{len(GT_Pneumothorax)} images")
