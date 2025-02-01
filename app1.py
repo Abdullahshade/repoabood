@@ -4,38 +4,20 @@ from PIL import Image
 from github import Github
 import os
 
-# -----------------------------
-# Helper: Force a page refresh using JavaScript
-# -----------------------------
-def js_rerun():
-    """Force the browser to refresh the page using a JavaScript snippet."""
-    st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
-
-# -----------------------------
-# Helper function: get the next ungraded index
-# -----------------------------
-def get_next_index(df, current_index):
-    """Advance to the next row that has not been labeled (Label_Flag != 1)."""
-    next_index = current_index + 1
-    while next_index < len(df) and df.iloc[next_index]["Label_Flag"] == 1:
-        next_index += 1
-    return next_index
-
-# -----------------------------
-# GitHub and file setup
-# -----------------------------
+# Load GitHub token from Streamlit secrets
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 g = Github(GITHUB_TOKEN)
-REPO_NAME = "Abdullahshade/repoabood"  # Replace with your repository name
-FILE_PATH = "chunk_1.csv"              # Path to metadata CSV in GitHub
+
+# Define repository and file paths
+REPO_NAME = "Abdullahshade/repoabood"
+FILE_PATH = "chunk_1.csv"
 repo = g.get_repo(REPO_NAME)
 
-images_folder = "Chunk1"     # Folder where images are stored
-csv_file_path = "chunk_1.csv"  # Local CSV file path
+# Define the paths
+images_folder = "Chunk1"
+csv_file_path = "chunk_1.csv"
 
-# -----------------------------
-# Load metadata from GitHub
-# -----------------------------
+# Load metadata
 try:
     contents = repo.get_contents(FILE_PATH)
     with open(csv_file_path, "wb") as f:
@@ -45,21 +27,22 @@ except Exception as e:
     st.error(f"Failed to fetch metadata from GitHub: {e}")
     st.stop()
 
-# -----------------------------
-# Streamlit UI setup
-# -----------------------------
+# App title
 st.title("Pneumothorax Grading and Image Viewer")
 
 # Initialize session state for the current index
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
-# Skip already processed images (where Label_Flag == 1)
-while (st.session_state.current_index < len(GT_Pneumothorax) and 
-       GT_Pneumothorax.iloc[st.session_state.current_index]["Label_Flag"] == 1):
-    st.session_state.current_index += 1
+# Loop to skip labeled or dropped images automatically
+while st.session_state.current_index < len(GT_Pneumothorax):
+    row = GT_Pneumothorax.iloc[st.session_state.current_index]
+    if row["Label_Flag"] == 1:
+        st.session_state.current_index += 1
+    else:
+        break
 
-# Check if there are still images left to process
+# Ensure there are still images left to process
 if st.session_state.current_index >= len(GT_Pneumothorax):
     st.success("All images have been labeled! No more images to process.")
     st.stop()
@@ -67,10 +50,10 @@ if st.session_state.current_index >= len(GT_Pneumothorax):
 # Get the current row (image and metadata)
 row = GT_Pneumothorax.iloc[st.session_state.current_index]
 
-# Build the image path based on the Image_Name column
+# Get the current image path
 image_path = os.path.join(images_folder, row["Image_Name"])
 
-# Display the image if it exists
+# Check if the image file exists and display it
 if os.path.exists(image_path):
     img = Image.open(image_path)
     st.image(
@@ -82,28 +65,26 @@ else:
     st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
     st.stop()
 
-# -----------------------------
-# Form for grading the image
-# -----------------------------
+# Handling user input for Pneumothorax type and measurements
 with st.form(key="grading_form"):
-    pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"])
-    pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"])
-    affected_side = st.selectbox("Affected Side", ["Right", "Left"])
-    submit_button = st.form_submit_button("Save Changes")
+    pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
+    pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
+    affected_side = st.selectbox("Affected Side", ["Right", "Left"], index=0)
+    
+    # Submit button inside the form
+    form_submit = st.form_submit_button("Save Changes")
 
-# A separate button for dropping the image
+# Drop functionality
 drop_button = st.button("Drop")
 
-# -----------------------------
-# Handle Drop functionality
-# -----------------------------
+# Handle drop functionality
 if drop_button:
-    # Mark the current image as dropped
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
     try:
         # Save the updated CSV locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        # Push the updated file to GitHub
         updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
             path=contents.path,
@@ -112,25 +93,20 @@ if drop_button:
             sha=contents.sha
         )
         st.success(f"Image {row['Image_Name']} marked as dropped and changes pushed to GitHub!")
-        
-        # Advance to the next ungraded image and refresh the page
-        st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        js_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
-# -----------------------------
 # Handle form submission (grading changes)
-# -----------------------------
-elif submit_button:
+elif form_submit:
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
     GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
     try:
-        # Save changes locally and push the updated CSV to GitHub
+        # Save the updated CSV locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        # Push updated metadata to GitHub
         updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
             path=contents.path,
@@ -139,20 +115,12 @@ elif submit_button:
             sha=contents.sha
         )
         st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
-        
-        # Advance to the next ungraded image and refresh the page
-        st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        js_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
-# -----------------------------
 # Navigation buttons (Previous / Next)
-# -----------------------------
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-    js_rerun()
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
-    js_rerun()
