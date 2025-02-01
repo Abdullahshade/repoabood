@@ -14,11 +14,12 @@ FILE_PATH = "chunk_1.csv"
 repo = g.get_repo(REPO_NAME)
 
 # Define the paths
-images_folder = "Chunk1"
-csv_file_path = "chunk_1.csv"
+images_folder = "Chunk1"  # Path to your images folder (update as needed)
+csv_file_path = "chunk_1.csv"  # Path to your CSV file (update as needed)
 
-# Load metadata
+# Load metadata (GT_Pneumothorax.csv)
 try:
+    # Fetch the latest file from the GitHub repository
     contents = repo.get_contents(FILE_PATH)
     with open(csv_file_path, "wb") as f:
         f.write(contents.decoded_content)
@@ -27,17 +28,29 @@ except Exception as e:
     st.error(f"Failed to fetch metadata from GitHub: {e}")
     st.stop()
 
+# Validate required columns in the CSV
+required_columns = ["Index", "Image_Name", "Label_Flag", "Drop", "Pneumothorax_Type", "Pneumothorax_Size", "Affected_Side"]
+missing_columns = [col for col in required_columns if col not in GT_Pneumothorax.columns]
+if missing_columns:
+    st.error(f"Missing required columns in the CSV: {', '.join(missing_columns)}")
+    st.stop()
+
 # App title
-st.title("Pneumothorax Grading and Image Viewer")
+st.title("Pneumothorax Grading and Image24 Viewer")
 
 # Initialize session state for the current index
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
 
+# Ensure the current index is valid
+if st.session_state.current_index < 0 or st.session_state.current_index >= len(GT_Pneumothorax):
+    st.error("Invalid index. Resetting to the first image.")
+    st.session_state.current_index = 0
+
 # Loop to skip labeled or dropped images automatically
 while st.session_state.current_index < len(GT_Pneumothorax):
     row = GT_Pneumothorax.iloc[st.session_state.current_index]
-    if row["Label_Flag"] == 1:
+    if row["Label_Flag"] == 1:  # Skip labeled or dropped images
         st.session_state.current_index += 1
     else:
         break
@@ -50,7 +63,7 @@ if st.session_state.current_index >= len(GT_Pneumothorax):
 # Get the current row (image and metadata)
 row = GT_Pneumothorax.iloc[st.session_state.current_index]
 
-# Get the current image path
+# Get the current image path (based on Image_Name)
 image_path = os.path.join(images_folder, row["Image_Name"])
 
 # Check if the image file exists and display it
@@ -62,8 +75,9 @@ if os.path.exists(image_path):
         use_container_width=True
     )
 else:
-    st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
-    st.stop()
+    st.error(f"Image {row['Image_Name']} not found in {images_folder}. Skipping...")
+    st.session_state.current_index += 1
+    st.experimental_rerun()  # Restart the app to process the next image
 
 # Handling user input for Pneumothorax type and measurements
 with st.form(key="grading_form"):
@@ -84,6 +98,10 @@ if drop_button:
     try:
         # Save the updated CSV locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        
+        # Fetch the latest version of the file before updating
+        contents = repo.get_contents(FILE_PATH)
+        
         # Push the updated file to GitHub
         updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
@@ -93,6 +111,10 @@ if drop_button:
             sha=contents.sha
         )
         st.success(f"Image {row['Image_Name']} marked as dropped and changes pushed to GitHub!")
+        
+        # Move to the next image
+        st.session_state.current_index += 1
+        st.experimental_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -101,11 +123,15 @@ elif form_submit:
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
     GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
+    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1  # Mark as labeled
     GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
     try:
         # Save the updated CSV locally
         GT_Pneumothorax.to_csv(csv_file_path, index=False)
+        
+        # Fetch the latest version of the file before updating
+        contents = repo.get_contents(FILE_PATH)
+        
         # Push updated metadata to GitHub
         updated_content = GT_Pneumothorax.to_csv(index=False)
         repo.update_file(
@@ -115,6 +141,10 @@ elif form_submit:
             sha=contents.sha
         )
         st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
+        
+        # Move to the next image
+        st.session_state.current_index += 1
+        st.experimental_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -122,5 +152,7 @@ elif form_submit:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
+    st.experimental_rerun()
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
+    st.experimental_rerun()
