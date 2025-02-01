@@ -364,7 +364,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 365,image_5202.png,,,,1.0,True
 366,image_9647.png,Simple,Small,Left,1.0,False
 367,image_5775.png,Simple,Large,Right,1.0,False
-368,image_4637.png,,,,1.0,True
+368,image_4637.png,,,,,True
 369,image_10786.png,,,,1.0,True
 370,image_3520.png,,,,1.0,True
 371,image_10549.png,,,,1.0,True
@@ -460,7 +460,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 462,image_4525.png,Tension,Large,Left,1.0,False
 463,image_5670.png,Simple,Small,Right,1.0,False
 464,image_9488.png,,,,,True
-465,image_11011.png,Simple,Small,Right,1.0,False
+465,image_11011.png,Simple,Small,Right,,False
 466,image_3103.png,Tension,Large,Left,1.0,False
 467,image_893.png,,,,,
 468,image_193.png,Tension,Large,Left,1.0,False
