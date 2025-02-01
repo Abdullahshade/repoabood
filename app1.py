@@ -3,144 +3,152 @@ import pandas as pd
 from PIL import Image
 from github import Github
 import os
+import io
 
-# Load GitHub token from Streamlit secrets
+# --- GitHub Setup ---
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 g = Github(GITHUB_TOKEN)
+REPO_NAME = "Abdullahshade/repoabood"
+FILE_PATH = "chunk_1.csv"
+images_folder = "Chunk1"
 
-# Define repository and file paths
-REPO_NAME = "Abdullahshade/repoabood"  # Replace with your GitHub repository name
-FILE_PATH = "chunk_1.csv"  # Path to metadata CSV in your GitHub repo
-repo = g.get_repo(REPO_NAME)
+# --- Load Data from GitHub ---
+@st.cache_data
+def load_data():
+    try:
+        repo = g.get_repo(REPO_NAME)
+        contents = repo.get_contents(FILE_PATH)
+        csv_content = contents.decoded_content
+        return pd.read_csv(io.BytesIO(csv_content))
+    except Exception as e:
+        st.error(f"Error loading data: {e}")
+        st.stop()
 
-# Define the paths
-images_folder = "Chunk1"  # Path to your images folder
-csv_file_path = "chunk_1.csv"  # Path to your CSV file
+GT_Pneumothorax = load_data()
 
-# Load metadata (GT_Pneumothorax.csv)
-try:
-    # Fetch the latest file from GitHub repository
-    contents = repo.get_contents(FILE_PATH)
-    with open(csv_file_path, "wb") as f:
-        f.write(contents.decoded_content)
-    GT_Pneumothorax = pd.read_csv(csv_file_path)
-except Exception as e:
-    st.error(f"Failed to fetch metadata from GitHub: {e}")
-    st.stop()
-
-# App title
-st.title("Pneumothorax Grading and Image View!!!!er")
-
-# Initialize session state for the current index
+# --- Session State Setup ---
 if "current_index" not in st.session_state:
     st.session_state.current_index = 0
-    # Find the first unlabeled image
-    while st.session_state.current_index < len(GT_Pneumothorax):
-        row = GT_Pneumothorax.iloc[st.session_state.current_index]
-        if row.get("Label_Flag", 0) == 0:
-            break
-        st.session_state.current_index += 1
 
-# Check if all images are labeled
-if st.session_state.current_index >= len(GT_Pneumothorax):
-    st.success("All images have been labeled! No more images to process.")
-    st.stop()
+# --- Reset Button ---
+if st.button("⟳ Reset App State"):
+    st.session_state.clear()
+    st.rerun()
 
-# Get the current row (image and metadata)
-row = GT_Pneumothorax.iloc[st.session_state.current_index]
-
-# Get the current image path
-image_path = os.path.join(images_folder, row["Image_Name"])
-
-# Check if the image file exists and display it
-if os.path.exists(image_path):
-    img = Image.open(image_path)
-    st.image(
-        img,
-        caption=f"Image index: {row['Index']} | Image Name: {row['Image_Name']}",
-        use_column_width=True
-    )
-else:
-    st.error(f"Image {row['Image_Name']} not found in {images_folder}.")
-    st.stop()
-
-# Handling user input for Pneumothorax type and measurements
-with st.form(key="grading_form"):
-    pneumothorax_type = st.selectbox("Pneumothorax Type", ["Simple", "Tension"], index=0)
-    pneumothorax_size = st.selectbox("Pneumothorax Size", ["Small", "Large"], index=0)
-    affected_side = st.selectbox("Affected Side", ["Right", "Left"], index=0)
-    form_submit = st.form_submit_button("Save Changes")
-
-# Drop button
-drop_button = st.button("Drop")
-
-def save_and_push_changes(message):
-    try:
-        GT_Pneumothorax.to_csv(csv_file_path, index=False)
-        updated_content = GT_Pneumothorax.to_csv(index=False).encode("utf-8")
-        repo.update_file(
-            path=contents.path,
-            message=message,
-            content=updated_content,
-            sha=contents.sha
-        )
-        st.success(f"Changes saved for Image {row['Image_Name']} and pushed to GitHub!")
-    except Exception as e:
-        st.error(f"Failed to save changes or push to GitHub: {e}")
-
+# --- Find Next Unlabeled Image ---
 def find_next_unlabeled(start_index):
     index = start_index
     while index < len(GT_Pneumothorax):
-        row = GT_Pneumothorax.iloc[index]
-        if row.get("Label_Flag", 0) == 0:
+        if GT_Pneumothorax.iloc[index].get("Label_Flag", 0) == 0:
             return index
         index += 1
     return index
 
+# --- Find Previous Unlabeled Image ---
 def find_previous_unlabeled(start_index):
     index = start_index
     while index >= 0:
-        row = GT_Pneumothorax.iloc[index]
-        if row.get("Label_Flag", 0) == 0:
+        if GT_Pneumothorax.iloc[index].get("Label_Flag", 0) == 0:
             return index
         index -= 1
     return index
 
-# Handle form submission
-if form_submit:
+# --- Initial Index Setup ---
+if st.session_state.current_index >= len(GT_Pneumothorax) or \
+   GT_Pneumothorax.iloc[st.session_state.current_index].get("Label_Flag", 0) == 1:
+    st.session_state.current_index = find_next_unlabeled(0)
+
+# --- Check if All Labeled ---
+if GT_Pneumothorax["Label_Flag"].sum() == len(GT_Pneumothorax):
+    st.warning("All images are labeled. Check the CSV or toggle below to review.")
+    if st.checkbox("Show labeled images anyway"):
+        st.session_state.current_index = 0
+    else:
+        st.stop()
+
+# --- Get Current Image Data ---
+row = GT_Pneumothorax.iloc[st.session_state.current_index]
+image_path = os.path.join(images_folder, row["Image_Name"])
+
+# --- Display Image ---
+if not os.path.exists(image_path):
+    st.error(f"Image {row['Image_Name']} not found!")
+    st.stop()
+
+img = Image.open(image_path)
+st.image(img, caption=f"Image {st.session_state.current_index + 1}/{len(GT_Pneumothorax)}", use_column_width=True)
+
+# --- Grading Form with Pre-Populated Values ---
+with st.form(key="grading_form"):
+    # Get current values or use defaults
+    current_type = row["Pneumothorax_Type"] if pd.notna(row["Pneumothorax_Type"]) else "Simple"
+    current_size = row["Pneumothorax_Size"] if pd.notna(row["Pneumothorax_Size"]) else "Small"
+    current_side = row["Affected_Side"] if pd.notna(row["Affected_Side"]) else "Right"
+
+    # Form elements
+    pneumothorax_type = st.selectbox(
+        "Pneumothorax Type",
+        ["Simple", "Tension"],
+        index=0 if current_type == "Simple" else 1
+    )
+    pneumothorax_size = st.selectbox(
+        "Pneumothorax Size",
+        ["Small", "Large"],
+        index=0 if current_size == "Small" else 1
+    )
+    affected_side = st.selectbox(
+        "Affected Side",
+        ["Right", "Left"],
+        index=0 if current_side == "Right" else 1
+    )
+
+    # Form buttons
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        form_submit = st.form_submit_button("💾 Save")
+    with col2:
+        drop_submit = st.form_submit_button("🗑️ Drop")
+
+# --- Save/Drop Handling ---
+def update_github():
+    try:
+        repo = g.get_repo(REPO_NAME)
+        contents = repo.get_contents(FILE_PATH)
+        updated_csv = GT_Pneumothorax.to_csv(index=False).encode("utf-8")
+        repo.update_file(contents.path, "Updated labels", updated_csv, contents.sha)
+        st.success("Changes saved to GitHub!")
+    except Exception as e:
+        st.error(f"GitHub update failed: {e}")
+
+if form_submit or drop_submit:
+    # Update DataFrame
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Type"] = pneumothorax_type
     GT_Pneumothorax.at[st.session_state.current_index, "Pneumothorax_Size"] = pneumothorax_size
     GT_Pneumothorax.at[st.session_state.current_index, "Affected_Side"] = affected_side
     GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "False"
-    save_and_push_changes("Update metadata with pneumothorax grading")
+    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True" if drop_submit else "False"
+    
+    # Update GitHub and move to next image
+    update_github()
     st.session_state.current_index = find_next_unlabeled(st.session_state.current_index + 1)
+    st.rerun()
 
-# Handle drop button
-if drop_button:
-    GT_Pneumothorax.at[st.session_state.current_index, "Label_Flag"] = 1
-    GT_Pneumothorax.at[st.session_state.current_index, "Drop"] = "True"
-    save_and_push_changes("Mark image as dropped")
-    st.session_state.current_index = find_next_unlabeled(st.session_state.current_index + 1)
+# --- Navigation Controls ---
+col_prev, col_next = st.columns(2)
+with col_prev:
+    if st.button("⏮️ Previous"):
+        new_index = find_previous_unlabeled(st.session_state.current_index - 1)
+        if new_index >= 0:
+            st.session_state.current_index = new_index
+            st.rerun()
+with col_next:
+    if st.button("⏭️ Next"):
+        new_index = find_next_unlabeled(st.session_state.current_index + 1)
+        if new_index < len(GT_Pneumothorax):
+            st.session_state.current_index = new_index
+            st.rerun()
 
-# Navigation buttons
-col1, col2 = st.columns(2)
-
-if col1.button("Previous"):
-    new_index = find_previous_unlabeled(st.session_state.current_index - 1)
-    if new_index >= 0:
-        st.session_state.current_index = new_index
-    else:
-        st.warning("No previous unlabeled images.")
-
-if col2.button("Next"):
-    new_index = find_next_unlabeled(st.session_state.current_index + 1)
-    if new_index < len(GT_Pneumothorax):
-        st.session_state.current_index = new_index
-    else:
-        st.warning("No next unlabeled images.")
-
-# Final check if all images are labeled
-if st.session_state.current_index >= len(GT_Pneumothorax):
-    st.success("All images have been labeled! No more images to process.")
-    st.stop()
+# --- Progress Display ---
+progress = st.session_state.current_index / len(GT_Pneumothorax)
+st.progress(progress)
+st.caption(f"Progress: {st.session_state.current_index + 1}/{len(GT_Pneumothorax)} images")
