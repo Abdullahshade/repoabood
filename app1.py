@@ -5,6 +5,13 @@ from github import Github
 import os
 
 # -----------------------------
+# Helper: Force a page refresh using JavaScript
+# -----------------------------
+def js_rerun():
+    """Force the browser to refresh the page using a JavaScript snippet."""
+    st.markdown("<script>window.location.reload()</script>", unsafe_allow_html=True)
+
+# -----------------------------
 # Helper function: get the next ungraded index
 # -----------------------------
 def get_next_index(df, current_index):
@@ -23,8 +30,8 @@ REPO_NAME = "Abdullahshade/repoabood"  # Replace with your repository name
 FILE_PATH = "chunk_1.csv"              # Path to metadata CSV in GitHub
 repo = g.get_repo(REPO_NAME)
 
-images_folder = "Chunk1"   # Folder where images are stored
-csv_file_path = "chunk_1.csv"  # Local path for the CSV file
+images_folder = "Chunk1"     # Folder where images are stored
+csv_file_path = "chunk_1.csv"  # Local CSV file path
 
 # -----------------------------
 # Load metadata from GitHub
@@ -60,10 +67,10 @@ if st.session_state.current_index >= len(GT_Pneumothorax):
 # Get the current row (image and metadata)
 row = GT_Pneumothorax.iloc[st.session_state.current_index]
 
-# Build the image path based on Image_Name column
+# Build the image path based on the Image_Name column
 image_path = os.path.join(images_folder, row["Image_Name"])
 
-# Display the image if found
+# Display the image if it exists
 if os.path.exists(image_path):
     img = Image.open(image_path)
     st.image(
@@ -108,7 +115,7 @@ if drop_button:
         
         # Advance to the next ungraded image and refresh the page
         st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        st.experimental_rerun()
+        js_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -135,7 +142,7 @@ elif submit_button:
         
         # Advance to the next ungraded image and refresh the page
         st.session_state.current_index = get_next_index(GT_Pneumothorax, st.session_state.current_index)
-        st.experimental_rerun()
+        js_rerun()
     except Exception as e:
         st.error(f"Failed to save changes or push to GitHub: {e}")
 
@@ -145,7 +152,7 @@ elif submit_button:
 col1, col2 = st.columns(2)
 if col1.button("Previous") and st.session_state.current_index > 0:
     st.session_state.current_index -= 1
-    st.experimental_rerun()
+    js_rerun()
 if col2.button("Next") and st.session_state.current_index < len(GT_Pneumothorax) - 1:
     st.session_state.current_index += 1
-    st.experimental_rerun()
+    js_rerun()
