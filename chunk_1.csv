@@ -520,7 +520,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 522,image_2207.png,Tension,Large,Right,1.0,False
 523,image_60.png,Tension,Large,Right,1.0,False
 524,image_7098.png,Simple,Large,Right,1.0,False
-525,image_2085.png,,,,,
+525,image_2085.png,Simple,Large,Right,1.0,True
 526,image_1747.png,,,,,
 527,image_2010.png,,,,,
 528,image_1612.png,,,,,
