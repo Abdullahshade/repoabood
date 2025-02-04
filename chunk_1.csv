@@ -641,7 +641,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 643,image_6508.png,Simple,Large,Right,1.0,False
 644,image_5586.png,,,,0.0,
 645,image_11520.png,Simple,Large,Right,1.0,True
-646,image_2749.png,,,,0.0,
+646,image_2749.png,Simple,Large,Right,1.0,True
 647,image_2864.png,,,,0.0,
 648,image_7522.png,,,,0.0,
 649,image_9866.png,,,,0.0,
