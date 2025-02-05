@@ -711,7 +711,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 713,image_11146.png,Tension,Large,Right,1.0,True
 714,image_7486.png,Tension,Large,Right,1.0,True
 715,image_8734.png,Simple,Large,Right,1.0,False
-716,image_3611.png,,,,0.0,
+716,image_3611.png,Tension,Large,Left,1.0,False
 717,image_2875.png,,,,0.0,
 718,image_2700.png,,,,0.0,
 719,image_9357.png,,,,0.0,
