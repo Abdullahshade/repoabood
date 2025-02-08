@@ -802,7 +802,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 804,image_1595.png,Simple,Small,Left,1.0,False
 805,image_6935.png,Tension,Small,Left,1.0,True
 806,image_10955.png,Tension,Small,Left,1.0,True
-807,image_8349.png,,,,0.0,
+807,image_8349.png,Tension,Small,Left,1.0,True
 808,image_2726.png,,,,0.0,
 809,image_4010.png,,,,0.0,
 810,image_9.png,,,,0.0,
