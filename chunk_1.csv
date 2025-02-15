@@ -913,7 +913,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 917,image_1880.png,Simple,Large,Right,1.0,True
 918,image_11228.png,Tension,Large,Right,1.0,False
 919,image_8132.png,Simple,Small,Right,1.0,False
-920,image_7348.png,,,,0.0,
+920,image_7348.png,Simple,Small,Right,1.0,True
 921,image_6575.png,,,,0.0,
 922,image_2114.png,,,,0.0,
 923,image_11472.png,,,,0.0,
