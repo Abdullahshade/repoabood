@@ -900,7 +900,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 904,image_2174.png,Tension,Large,Right,1.0,False
 905,image_10857.png,Tension,Large,Right,1.0,True
 906,image_7774.png,Tension,Large,Right,1.0,True
-907,image_11010.png,,,,0.0,
+907,image_11010.png,Simple,Small,Right,1.0,False
 908,image_4048.png,,,,0.0,
 909,image_2801.png,,,,0.0,
 910,image_6748.png,,,,0.0,
