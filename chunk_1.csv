@@ -967,7 +967,7 @@ Index,Image_Name,Pneumothorax_Type,Pneumothorax_Size,Affected_Side,Label_Flag,Dr
 971,image_10505.png,Simple,Large,Right,1.0,True
 972,image_1704.png,Simple,Large,Right,1.0,False
 973,image_2994.png,Simple,Small,Left,1.0,False
-974,image_8070.png,,,,0.0,
+974,image_8070.png,Simple,Small,Left,1.0,True
 975,image_6400.png,,,,0.0,
 976,image_2342.png,,,,0.0,
 977,image_7690.png,,,,0.0,
